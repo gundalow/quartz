@@ -46,6 +46,8 @@ export type Analytics =
       provider: "matomo"
       host: string
       siteId: string
+      trackingclient?: string
+      analyticsscript?: string
     }
 
 export interface GlobalConfiguration {

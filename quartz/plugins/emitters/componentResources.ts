@@ -202,6 +202,8 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
       document.head.appendChild(clarityScript)
     `)
   } else if (cfg.analytics?.provider === "matomo") {
+    const siteId = cfg.analytics.siteId
+    const matomoHost = cfg.analytics.host
     componentResources.afterDOMLoaded.push(`
       const matomoScript = document.createElement("script");
       matomoScript.innerHTML = \`
@@ -218,12 +220,12 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
       _paq.push(['trackPageView']);
       _paq.push(['enableLinkTracking']);
       (function() {
-        const u="//${cfg.analytics.host}/";
-        _paq.push(['setTrackerUrl', u+'matomo.php']);
-        _paq.push(['setSiteId', ${cfg.analytics.siteId}]);
+        const u="//${matomoHost}/";
+        _paq.push(['setTrackerUrl', u+"${cfg.analytics.trackingclient ?? 'matomo.php'}"]);
+        _paq.push(['setSiteId', ${siteId}]);
         const d=document, g=d.createElement('script'), s=d.getElementsByTagName
 ('script')[0];
-        g.type='text/javascript'; g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+        g.type='text/javascript'; g.async=true; g.src=u+"${cfg.analytics.trackingclient ?? 'matomo.js'}"; s.parentNode.insertBefore(g,s);
       })();
       \`
       document.head.appendChild(matomoScript);
