@@ -221,14 +221,67 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
       _paq.push(['enableLinkTracking']);
       (function() {
         const u="//${matomoHost}/";
-        _paq.push(['setTrackerUrl', u+"${cfg.analytics.trackingclient ?? 'matomo.php'}"]);
+        _paq.push(['setTrackerUrl', u+"${cfg.analytics.trackingclient ?? "matomo.php"}"]);
         _paq.push(['setSiteId', ${siteId}]);
         const d=document, g=d.createElement('script'), s=d.getElementsByTagName
 ('script')[0];
-        g.type='text/javascript'; g.async=true; g.src=u+"${cfg.analytics.trackingclient ?? 'matomo.js'}"; s.parentNode.insertBefore(g,s);
+        g.type='text/javascript'; g.async=true; g.src=u+"${cfg.analytics.trackingclient ?? "matomo.js"}"; s.parentNode.insertBefore(g,s);
       })();
       \`
       document.head.appendChild(matomoScript);
+    `)
+
+    // Add search tracking functionality for Matomo
+    componentResources.afterDOMLoaded.push(`
+      // Search tracking for Matomo
+      function initMatomoSearchTracking() {
+        function trackSearchEvent(searchTerm, searchResults) {
+          if (window._paq && searchTerm) {
+            _paq.push(['trackSiteSearch', 
+              searchTerm,                    // Search keyword
+              false,                         // Search category (optional)
+              searchResults ? searchResults.length : 0  // Results count
+            ]);
+          }
+        }
+        
+        const searchInput = document.querySelector('.search-bar');
+        if (!searchInput) return;
+        
+        // Track when user types in search (debounced)
+        let searchTimeout;
+        searchInput.addEventListener('input', function(event) {
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(() => {
+            const searchTerm = event.target.value.trim();
+            if (searchTerm.length >= 3) {
+              // Get current search results from the results container
+              const resultsContainer = document.querySelector('.results-container');
+              const searchResults = resultsContainer ? 
+                resultsContainer.querySelectorAll('.result-card:not(.no-match)') : [];
+              trackSearchEvent(searchTerm, searchResults);
+            }
+          }, 500); // 500ms debounce
+        });
+        
+        // Track when user clicks on search results
+        document.addEventListener('click', function(event) {
+          const searchResult = event.target.closest('.result-card');
+          if (searchResult && !searchResult.classList.contains('no-match') && searchInput.value.trim()) {
+            const searchTerm = searchInput.value.trim();
+            _paq.push(['trackSiteSearch', searchTerm, 'result_click']);
+          }
+        });
+      }
+      
+      // Initialize search tracking when search component is ready
+      document.addEventListener('nav', () => {
+        // Wait for search component to be initialized
+        setTimeout(initMatomoSearchTracking, 100);
+      });
+      
+      // Also initialize on initial page load
+      initMatomoSearchTracking();
     `)
   }
 
