@@ -103,7 +103,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
           gtag('event', 'page_view', { page_title: document.title, page_location: location.href });
         });
       };
-      
+
       document.head.appendChild(gtagScript);
     `)
   } else if (cfg.analytics?.provider === "plausible") {
@@ -182,7 +182,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
           window.tinylytics.triggerUpdate();
         });
       };
-      
+
       document.head.appendChild(tinylyticsScript);
     `)
   } else if (cfg.analytics?.provider === "cabin") {
@@ -204,6 +204,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
   } else if (cfg.analytics?.provider === "matomo") {
     const siteId = cfg.analytics.siteId
     const matomoHost = cfg.analytics.host
+    const matomoTracker = `${cfg.analytics.trackingclient ?? "matomo.php"}`
     componentResources.afterDOMLoaded.push(`
       const matomoScript = document.createElement("script");
       matomoScript.innerHTML = \`
@@ -221,7 +222,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
       _paq.push(['enableLinkTracking']);
       (function() {
         const u="//${matomoHost}/";
-        _paq.push(['setTrackerUrl', u+"${cfg.analytics.trackingclient ?? "matomo.php"}"]);
+        _paq.push(['setTrackerUrl', u+`${matomoTracker}`]);
         _paq.push(['setSiteId', ${siteId}]);
         const d=document, g=d.createElement('script'), s=d.getElementsByTagName
 ('script')[0];
@@ -252,22 +253,22 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
               m: new Date().getMinutes(),
               s: new Date().getSeconds()
             });
-            
+
             // Send tracking request
-            fetch('https://${matomoHost}/matomo.php?' + params.toString(), {
+            fetch(`//${matomoHost}/${matomoTracker}?` + params.toString(), {
               method: 'GET',
               mode: 'no-cors'
             }).catch(() => {
               // Silently handle errors - tracking is non-critical
             });
-            
+
             console.log('Matomo search tracked:', searchTerm, 'results:', searchResults?.length || 0);
           }
         }
-        
+
         const searchInput = document.querySelector('.search-bar');
         if (!searchInput) return;
-        
+
         // Track when user types in search (debounced)
         let searchTimeout;
         searchInput.addEventListener('input', function(event) {
@@ -277,13 +278,13 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
             if (searchTerm.length >= 3) {
               // Get current search results from the results container
               const resultsContainer = document.querySelector('.results-container');
-              const searchResults = resultsContainer ? 
+              const searchResults = resultsContainer ?
                 resultsContainer.querySelectorAll('.result-card:not(.no-match)') : [];
               trackSearchEvent(searchTerm, searchResults);
             }
           }, 500); // 500ms debounce
         });
-        
+
         // Track when user clicks on search results
         document.addEventListener('click', function(event) {
           const searchResult = event.target.closest('.result-card');
@@ -293,13 +294,13 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
           }
         });
       }
-      
+
       // Initialize search tracking when search component is ready
       document.addEventListener('nav', () => {
         // Wait for search component to be initialized
         setTimeout(initMatomoSearchTracking, 100);
       });
-      
+
       // Also initialize on initial page load
       initMatomoSearchTracking();
     `)
