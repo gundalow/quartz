@@ -13,7 +13,11 @@ const config: QuartzConfig = {
     enableSPA: true,
     enablePopovers: true,
     analytics: {
-      provider: "plausible",
+      provider: "matomo",
+      host: "proxy.stats.redhat.com",
+      siteId: "237",
+      trackingclient: "stats.php",
+      analyticsscript: "stats.php",
     },
     locale: "en-US",
     baseUrl: "quartz.jzhao.xyz",
