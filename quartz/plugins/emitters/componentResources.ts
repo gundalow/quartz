@@ -233,15 +233,35 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
 
     // Add search tracking functionality for Matomo
     componentResources.afterDOMLoaded.push(`
-      // Search tracking for Matomo
+      // Search tracking for Matomo - Direct HTTP tracking
       function initMatomoSearchTracking() {
         function trackSearchEvent(searchTerm, searchResults) {
-          if (window._paq && searchTerm) {
-            _paq.push(['trackSiteSearch', 
-              searchTerm,                    // Search keyword
-              false,                         // Search category (optional)
-              searchResults ? searchResults.length : 0  // Results count
-            ]);
+          if (searchTerm) {
+            // Send direct HTTP tracking request since matomo.js is blocked by CORS
+            const params = new URLSearchParams({
+              idsite: '${siteId}',
+              rec: '1',
+              search: searchTerm,
+              search_count: searchResults ? searchResults.length : 0,
+              url: window.location.href,
+              urlref: document.referrer || '',
+              action_name: 'Site Search: ' + searchTerm,
+              rand: Math.random(),
+              apiv: '1',
+              h: new Date().getHours(),
+              m: new Date().getMinutes(),
+              s: new Date().getSeconds()
+            });
+            
+            // Send tracking request
+            fetch('https://${matomoHost}/matomo.php?' + params.toString(), {
+              method: 'GET',
+              mode: 'no-cors'
+            }).catch(() => {
+              // Silently handle errors - tracking is non-critical
+            });
+            
+            console.log('Matomo search tracked:', searchTerm, 'results:', searchResults?.length || 0);
           }
         }
         
