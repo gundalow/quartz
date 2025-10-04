@@ -236,9 +236,6 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
     componentResources.afterDOMLoaded.push(`
       // Search tracking for Matomo - Direct HTTP tracking
       function initMatomoSearchTracking() {
-        // Prevent multiple initializations by checking global flag
-        if (window.matomoSearchTrackingInitialized) return;
-
         function trackSearchEvent(searchTerm, searchResults) {
           if (searchTerm) {
             // Send direct HTTP tracking request since matomo.js is blocked by CORS
@@ -272,6 +269,9 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
         const searchInput = document.querySelector('.search-bar');
         if (!searchInput) return;
 
+        // Check if this element already has our tracking listener
+        if (searchInput.hasAttribute('data-matomo-tracked')) return;
+
         // Track when user types in search (debounced)
         let searchTimeout;
         const searchInputListener = function(event) {
@@ -289,18 +289,21 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
         };
         searchInput.addEventListener('input', searchInputListener);
 
-        // Track when user clicks on search results
-        const searchClickListener = function(event) {
-          const searchResult = event.target.closest('.result-card');
-          if (searchResult && !searchResult.classList.contains('no-match') && searchInput.value.trim()) {
-            const searchTerm = searchInput.value.trim();
-            _paq.push(['trackSiteSearch', searchTerm, 'result_click']);
-          }
-        };
-        document.addEventListener('click', searchClickListener);
+        // Mark this element as tracked to prevent duplicate listeners
+        searchInput.setAttribute('data-matomo-tracked', 'true');
 
-        // Store global flag to prevent re-initialization
-        window.matomoSearchTrackingInitialized = true;
+        // Use event delegation for clicks to avoid duplicate listeners
+        if (!document.body.hasAttribute('data-matomo-click-tracked')) {
+          document.addEventListener('click', function(event) {
+            const searchResult = event.target.closest('.result-card');
+            const searchInput = document.querySelector('.search-bar');
+            if (searchResult && !searchResult.classList.contains('no-match') && searchInput && searchInput.value.trim()) {
+              const searchTerm = searchInput.value.trim();
+              _paq.push(['trackSiteSearch', searchTerm, 'result_click']);
+            }
+          });
+          document.body.setAttribute('data-matomo-click-tracked', 'true');
+        }
       }
 
       // Initialize search tracking when search component is ready
