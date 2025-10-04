@@ -236,6 +236,9 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
     componentResources.afterDOMLoaded.push(`
       // Search tracking for Matomo - Direct HTTP tracking
       function initMatomoSearchTracking() {
+        // Prevent multiple initializations by checking global flag
+        if (window.matomoSearchTrackingInitialized) return;
+
         function trackSearchEvent(searchTerm, searchResults) {
           if (searchTerm) {
             // Send direct HTTP tracking request since matomo.js is blocked by CORS
@@ -271,7 +274,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
 
         // Track when user types in search (debounced)
         let searchTimeout;
-        searchInput.addEventListener('input', function(event) {
+        const searchInputListener = function(event) {
           clearTimeout(searchTimeout);
           searchTimeout = setTimeout(() => {
             const searchTerm = event.target.value.trim();
@@ -283,16 +286,21 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
               trackSearchEvent(searchTerm, searchResults);
             }
           }, 500); // 500ms debounce
-        });
+        };
+        searchInput.addEventListener('input', searchInputListener);
 
         // Track when user clicks on search results
-        document.addEventListener('click', function(event) {
+        const searchClickListener = function(event) {
           const searchResult = event.target.closest('.result-card');
           if (searchResult && !searchResult.classList.contains('no-match') && searchInput.value.trim()) {
             const searchTerm = searchInput.value.trim();
             _paq.push(['trackSiteSearch', searchTerm, 'result_click']);
           }
-        });
+        };
+        document.addEventListener('click', searchClickListener);
+
+        // Store global flag to prevent re-initialization
+        window.matomoSearchTrackingInitialized = true;
       }
 
       // Initialize search tracking when search component is ready
