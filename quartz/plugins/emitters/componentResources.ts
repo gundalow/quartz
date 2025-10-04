@@ -215,6 +215,28 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
       document.addEventListener("nav", () => {
         _paq.push(['setCustomUrl', location.pathname]);
         _paq.push(['setDocumentTitle', document.title]);
+        
+        // Check for search context to implement "Pages Following a Site Search"
+        const searchContextStr = sessionStorage.getItem('matomo_search_context');
+        if (searchContextStr) {
+          try {
+            const searchContext = JSON.parse(searchContextStr);
+            const now = Date.now();
+            // Only include search context if within 10 minutes of search
+            if ((now - searchContext.timestamp) < 600000) {
+              _paq.push(['trackSiteSearch', searchContext.term, false, searchContext.count]);
+              _paq.push(['trackPageView']);
+              return;
+            } else {
+              // Clear expired search context
+              sessionStorage.removeItem('matomo_search_context');
+            }
+          } catch (e) {
+            // Clear invalid search context
+            sessionStorage.removeItem('matomo_search_context');
+          }
+        }
+        
         _paq.push(['trackPageView']);
       });
 
@@ -246,6 +268,14 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
             if (searchTerm === lastTrackedTerm && (now - lastTrackedTime) < 5000) {
               return;
             }
+
+            // Store search context for "Pages Following Search" tracking
+            const searchContext = {
+              term: searchTerm,
+              count: searchResults ? searchResults.length : 0,
+              timestamp: now
+            };
+            sessionStorage.setItem('matomo_search_context', JSON.stringify(searchContext));
 
             // Send direct HTTP tracking request since matomo.js is blocked by CORS
             const params = new URLSearchParams({
@@ -314,6 +344,28 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
             const searchInput = document.querySelector('.search-bar');
             if (searchResult && !searchResult.classList.contains('no-match') && searchInput && searchInput.value.trim()) {
               const searchTerm = searchInput.value.trim();
+              
+              // Ensure search context is stored for subsequent page tracking
+              const searchContext = {
+                term: searchTerm,
+                count: 0, // Will be updated by search tracking if available
+                timestamp: Date.now()
+              };
+              
+              // Get current search context if available to preserve search_count
+              const existingContextStr = sessionStorage.getItem('matomo_search_context');
+              if (existingContextStr) {
+                try {
+                  const existingContext = JSON.parse(existingContextStr);
+                  if (existingContext.term === searchTerm) {
+                    searchContext.count = existingContext.count;
+                  }
+                } catch (e) {
+                  // Use default values if parsing fails
+                }
+              }
+              
+              sessionStorage.setItem('matomo_search_context', JSON.stringify(searchContext));
               _paq.push(['trackSiteSearch', searchTerm, 'result_click']);
             }
           });
