@@ -213,30 +213,44 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
       // Track SPA navigation
       // https://developer.matomo.org/guides/spa-tracking
       document.addEventListener("nav", () => {
+        console.log('📍 Nav event triggered for:', location.pathname);
         _paq.push(['setCustomUrl', location.pathname]);
         _paq.push(['setDocumentTitle', document.title]);
         
         // Check for search context to implement "Pages Following a Site Search"
         const searchContextStr = sessionStorage.getItem('matomo_search_context');
+        console.log('Nav event search context check:', searchContextStr);
+        
         if (searchContextStr) {
           try {
             const searchContext = JSON.parse(searchContextStr);
             const now = Date.now();
+            const ageMinutes = Math.round((now - searchContext.timestamp) / 60000);
+            console.log('Search context age:', ageMinutes, 'minutes');
+            
             // Only include search context if within 10 minutes of search
             if ((now - searchContext.timestamp) < 600000) {
+              console.log('📊 Tracking page view with search context:', {
+                term: searchContext.term,
+                count: searchContext.count,
+                page: location.pathname
+              });
               _paq.push(['trackSiteSearch', searchContext.term, false, searchContext.count]);
               _paq.push(['trackPageView']);
               return;
             } else {
+              console.log('Search context expired, removing');
               // Clear expired search context
               sessionStorage.removeItem('matomo_search_context');
             }
           } catch (e) {
+            console.log('Invalid search context, removing:', e);
             // Clear invalid search context
             sessionStorage.removeItem('matomo_search_context');
           }
         }
         
+        console.log('📊 Tracking regular page view for:', location.pathname);
         _paq.push(['trackPageView']);
       });
 
@@ -340,10 +354,18 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
         // Use event delegation for clicks to avoid duplicate listeners
         if (!document.body.hasAttribute('data-matomo-click-tracked')) {
           document.addEventListener('click', function(event) {
+            console.log('Click event detected:', event.target);
+            
             const searchResult = event.target.closest('.result-card');
             const searchInput = document.querySelector('.search-bar');
+            
+            console.log('Search result element:', searchResult);
+            console.log('Search input element:', searchInput);
+            console.log('Search input value:', searchInput?.value);
+            
             if (searchResult && !searchResult.classList.contains('no-match') && searchInput && searchInput.value.trim()) {
               const searchTerm = searchInput.value.trim();
+              console.log('🔍 Search result clicked! Term:', searchTerm);
               
               // Ensure search context is stored for subsequent page tracking
               const searchContext = {
@@ -354,19 +376,32 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
               
               // Get current search context if available to preserve search_count
               const existingContextStr = sessionStorage.getItem('matomo_search_context');
+              console.log('Existing search context:', existingContextStr);
+              
               if (existingContextStr) {
                 try {
                   const existingContext = JSON.parse(existingContextStr);
                   if (existingContext.term === searchTerm) {
                     searchContext.count = existingContext.count;
+                    console.log('Preserved search count:', searchContext.count);
                   }
                 } catch (e) {
-                  // Use default values if parsing fails
+                  console.log('Error parsing existing search context:', e);
                 }
               }
               
+              console.log('Storing search context for click:', searchContext);
               sessionStorage.setItem('matomo_search_context', JSON.stringify(searchContext));
+              
+              console.log('Tracking search result click via _paq');
               _paq.push(['trackSiteSearch', searchTerm, 'result_click']);
+            } else {
+              console.log('Search result click conditions not met:', {
+                hasSearchResult: !!searchResult,
+                isNoMatch: searchResult?.classList.contains('no-match'),
+                hasSearchInput: !!searchInput,
+                hasSearchValue: !!searchInput?.value.trim()
+              });
             }
           });
           document.body.setAttribute('data-matomo-click-tracked', 'true');
