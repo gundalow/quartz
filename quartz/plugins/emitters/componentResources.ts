@@ -306,13 +306,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
         }
       }
 
-      // Initialize search tracking when search component is ready
-      document.addEventListener('nav', () => {
-        // Wait for search component to be initialized
-        setTimeout(initMatomoSearchTracking, 100);
-      });
-
-      // Also initialize on initial page load
+      // Initialize search tracking on page load
       initMatomoSearchTracking();
     `)
   }
