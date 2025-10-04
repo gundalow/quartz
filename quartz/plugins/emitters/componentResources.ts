@@ -204,7 +204,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
   } else if (cfg.analytics?.provider === "matomo") {
     const siteId = cfg.analytics.siteId
     const matomoHost = cfg.analytics.host
-    const matomoTracker = `${cfg.analytics.trackingclient ?? "matomo.php"}`
+    const matomoTracker = cfg.analytics.trackingclient ?? "matomo.php"
     componentResources.afterDOMLoaded.push(`
       const matomoScript = document.createElement("script");
       matomoScript.innerHTML = \`
@@ -221,8 +221,8 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
       _paq.push(['trackPageView']);
       _paq.push(['enableLinkTracking']);
       (function() {
-        const u="//${matomoHost}/";
-        _paq.push(['setTrackerUrl', u + matomoTracker]);
+        const u="//${cfg.analytics.host}/";
+        _paq.push(['setTrackerUrl', u + "${cfg.analytics.trackingclient ?? "matomo.php"}"]);
         _paq.push(['setSiteId', ${siteId}]);
         const d=document, g=d.createElement('script'), s=d.getElementsByTagName
 ('script')[0];
@@ -255,7 +255,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
             });
 
             // Send tracking request
-            fetch(`//${matomoHost}/${matomoTracker}?` + params.toString(), {
+            fetch(`//${cfg.analytics.host}/${cfg.analytics.trackingclient ?? "matomo.php"}?` + params.toString(), {
               method: 'GET',
               mode: 'no-cors'
             }).catch(() => {
