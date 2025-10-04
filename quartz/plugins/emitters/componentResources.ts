@@ -221,8 +221,8 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
       _paq.push(['trackPageView']);
       _paq.push(['enableLinkTracking']);
       (function() {
-        const u="//${cfg.analytics.host}/";
-        _paq.push(['setTrackerUrl', u + "${cfg.analytics.trackingclient ?? "matomo.php"}"]);
+        const u="//${matomoHost}/";
+        _paq.push(['setTrackerUrl', u + '${matomoTracker}']);
         _paq.push(['setSiteId', ${siteId}]);
         const d=document, g=d.createElement('script'), s=d.getElementsByTagName
 ('script')[0];
@@ -255,7 +255,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
             });
 
             // Send tracking request
-            fetch(`//${cfg.analytics.host}/${cfg.analytics.trackingclient ?? "matomo.php"}?` + params.toString(), {
+            fetch(\`//${matomoHost}/${matomoTracker}?\` + params.toString(), {
               method: 'GET',
               mode: 'no-cors'
             }).catch(() => {
