@@ -292,11 +292,13 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
           searchTimeout = setTimeout(() => {
             const searchTerm = event.target.value.trim();
             if (searchTerm.length >= 3) {
-              // Get current search results from the results container
-              const resultsContainer = document.querySelector('.results-container');
-              const searchResults = resultsContainer ?
-                resultsContainer.querySelectorAll('.result-card:not(.no-match)') : [];
-              trackSearchEvent(searchTerm, searchResults);
+              // Wait additional time for search results to fully populate
+              setTimeout(() => {
+                const resultsContainer = document.querySelector('.results-container');
+                const searchResults = resultsContainer ?
+                  resultsContainer.querySelectorAll('.result-card:not(.no-match)') : [];
+                trackSearchEvent(searchTerm, searchResults);
+              }, 250); // Additional delay for results rendering
             }
           }, 1500); // 1.5 second debounce to ensure user finished typing
         };
