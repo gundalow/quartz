@@ -236,8 +236,17 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
     componentResources.afterDOMLoaded.push(`
       // Search tracking for Matomo - Direct HTTP tracking
       function initMatomoSearchTracking() {
+        let lastTrackedTerm = '';
+        let lastTrackedTime = 0;
+
         function trackSearchEvent(searchTerm, searchResults) {
           if (searchTerm) {
+            // Prevent duplicate tracking of same term within 5 seconds
+            const now = Date.now();
+            if (searchTerm === lastTrackedTerm && (now - lastTrackedTime) < 5000) {
+              return;
+            }
+
             // Send direct HTTP tracking request since matomo.js is blocked by CORS
             const params = new URLSearchParams({
               idsite: '${siteId}',
@@ -262,6 +271,10 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
               // Silently handle errors - tracking is non-critical
             });
 
+            // Update tracking state
+            lastTrackedTerm = searchTerm;
+            lastTrackedTime = now;
+
             console.log('Matomo search tracked:', searchTerm, 'results:', searchResults?.length || 0);
           }
         }
@@ -285,7 +298,7 @@ function addGlobalPageResources(ctx: BuildCtx, componentResources: ComponentReso
                 resultsContainer.querySelectorAll('.result-card:not(.no-match)') : [];
               trackSearchEvent(searchTerm, searchResults);
             }
-          }, 500); // 500ms debounce
+          }, 1500); // 1.5 second debounce to ensure user finished typing
         };
         searchInput.addEventListener('input', searchInputListener);
 
